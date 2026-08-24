@@ -166,9 +166,8 @@ function LabeledSelect({ id, label, value, options, onChange }: { id: string; la
 }
 
 export default function ThumbnailPage() {
-  const { state: workflowState } = useWorkflow();
+  const { state: workflowState, setThumbnailData: cacheThumbnailData } = useWorkflow();
   const [, setLocation] = useLocation();
-  const initializedFromWorkflow = useRef(false);
   const lastGenerationMode = useRef<"create" | "variation">("create");
   const referenceInputRef = useRef<HTMLInputElement>(null);
   const selectedIdea = workflowState.idea?.selectedIdea;
@@ -197,18 +196,61 @@ export default function ThumbnailPage() {
   const [generationError, setGenerationError] = useState<RequestFailure | null>(null);
   const [variationDirection, setVariationDirection] = useState("");
   const [downloadedName, setDownloadedName] = useState<string | null>(null);
+  const [cacheReady, setCacheReady] = useState(false);
 
   useEffect(() => {
-    if (initializedFromWorkflow.current) return;
-    if (selectedIdea) {
+    const cached = workflowState.cachedThumbnail;
+    if (cached) {
+      setTopic(cached.topic);
+      setThumbnailStyle(cached.thumbnailStyle as ThumbnailStyle);
+      setMainText(cached.mainText);
+      setSubText(cached.subText);
+      setDescription(cached.description);
+      setComposition(cached.composition as ThumbnailComposition);
+      setCameraAngle(cached.cameraAngle as ThumbnailCameraAngle);
+      setLighting(cached.lighting as ThumbnailLighting);
+      setColorScheme(cached.colorScheme as ThumbnailColorScheme);
+      setTextPosition(cached.textPosition as ThumbnailTextPosition);
+      setPresetId(cached.presetId);
+      setAutoBlend(cached.autoBlend);
+      setThumbnailData(cached.thumbnailData);
+      setResultModel(cached.resultModel);
+    } else if (selectedIdea) {
       setTopic(selectedIdea.title);
       setDescription(selectedIdea.thumbnailConcept);
-      initializedFromWorkflow.current = true;
     } else if (workflowState.cachedScript) {
       setTopic(workflowState.cachedScript.topic || workflowState.cachedScript.title || "");
-      initializedFromWorkflow.current = true;
     }
-  }, [selectedIdea, workflowState.cachedScript]);
+    setCacheReady(true);
+  }, [workflowState.id]);
+
+  useEffect(() => {
+    if (!cacheReady || !workflowState.id) return;
+    const timeout = window.setTimeout(() => {
+      cacheThumbnailData({
+        topic,
+        thumbnailStyle,
+        mainText,
+        subText,
+        description,
+        composition,
+        cameraAngle,
+        lighting,
+        colorScheme,
+        textPosition,
+        presetId,
+        autoBlend,
+        thumbnailData,
+        resultModel,
+        timestamp: Date.now(),
+      });
+    }, 400);
+    return () => window.clearTimeout(timeout);
+  }, [
+    autoBlend, cacheReady, cacheThumbnailData, cameraAngle, colorScheme, composition,
+    description, lighting, mainText, presetId, resultModel, subText, textPosition,
+    thumbnailData, thumbnailStyle, topic, workflowState.id,
+  ]);
 
   useEffect(() => {
     const controller = new AbortController();

@@ -1,4 +1,5 @@
 import { useLocation, Link } from "wouter";
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,10 +13,10 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Search, FileText, Play, Settings, Rocket, Check, ArrowRight, Image } from "lucide-react";
+import { Search, FileText, Play, Settings, Rocket, Check, ArrowRight, Image, History, Loader2 } from "lucide-react";
 import { useWorkflow } from "@/lib/workflow-context";
 import { useQueryClient } from "@tanstack/react-query";
-import type { SearchResponse } from "@shared/schema";
+import { formatDistanceToNowStrict } from "date-fns";
 
 const menuItems = [
   {
@@ -48,25 +49,35 @@ const stepLabels: Record<ShellWorkflowStep, string> = {
 
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
-  const { state, startWorkflow } = useWorkflow();
+  const {
+    state,
+    recentWorkflows,
+    historyLoading,
+    historyError,
+    startWorkflow,
+    openWorkflow,
+    goToStep,
+  } = useWorkflow();
   const queryClient = useQueryClient();
+  const [openingWorkflowId, setOpeningWorkflowId] = useState<string | null>(null);
 
   const handleStartWorkflow = () => {
-    const hasCachedSearch = queryClient
-      .getQueriesData<SearchResponse>({ queryKey: ["/api/youtube/search"] })
-      .some(([, cached]) => Boolean(cached?.videos.length));
-    const hasExistingWork = Boolean(
-      state.isWorkflowActive || state.cachedResearch || state.idea || state.cachedScript || hasCachedSearch,
-    );
-    if (
-      hasExistingWork &&
-      !window.confirm("Start a new workflow? This will clear the current research, script, and thumbnail context from this session.")
-    ) {
-      return;
-    }
     queryClient.removeQueries({ queryKey: ["/api/youtube/search"] });
     startWorkflow();
     setLocation("/");
+  };
+
+  const handleOpenWorkflow = async (id: string) => {
+    if (id === state.id) return;
+    setOpeningWorkflowId(id);
+    try {
+      const step = await openWorkflow(id);
+      if (!step) return;
+      queryClient.removeQueries({ queryKey: ["/api/youtube/search"] });
+      setLocation(step === "script" ? "/script" : step === "thumbnail" ? "/thumbnail" : "/");
+    } finally {
+      setOpeningWorkflowId(null);
+    }
   };
 
   const getStepStatus = (step: ShellWorkflowStep) => {
@@ -89,7 +100,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
-        <Link href="/" className="flex items-center gap-3" aria-label="YouTube Pro home">
+        <Link href="/" onClick={() => goToStep("research")} className="flex items-center gap-3" aria-label="YouTube Pro home">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
             <Play className="h-5 w-5 text-primary-foreground" fill="currentColor" aria-hidden="true" />
           </div>
@@ -169,6 +180,7 @@ export function AppSidebar() {
                     >
                       <Link
                         href={item.url}
+                        onClick={() => goToStep(item.step)}
                         aria-current={isActive ? "page" : undefined}
                         data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                       >
@@ -192,6 +204,53 @@ export function AppSidebar() {
                 );
               })}
             </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup className="pt-1">
+          <SidebarGroupLabel className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <History className="h-3.5 w-3.5" aria-hidden="true" />
+            Recent workflows
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            {historyLoading ? (
+              <p className="px-2 py-2 text-xs text-muted-foreground" role="status">Loading local history...</p>
+            ) : recentWorkflows.length === 0 ? (
+              <p className="px-2 py-2 text-xs leading-relaxed text-muted-foreground">Your recent research, scripts, and thumbnails will appear here.</p>
+            ) : (
+              <SidebarMenu>
+                {recentWorkflows.map((workflow) => {
+                  const active = workflow.id === state.id;
+                  return (
+                    <SidebarMenuItem key={workflow.id}>
+                      <SidebarMenuButton
+                        type="button"
+                        isActive={active}
+                        className="h-auto min-h-12 items-start py-2"
+                        onClick={() => void handleOpenWorkflow(workflow.id)}
+                        disabled={openingWorkflowId !== null}
+                        data-testid={`button-recent-workflow-${workflow.id}`}
+                        aria-current={active ? "page" : undefined}
+                        title={workflow.title}
+                      >
+                        {openingWorkflowId === workflow.id ? (
+                          <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-primary" aria-hidden="true" />
+                        ) : (
+                          <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${active ? "bg-primary" : "bg-muted-foreground/40"}`} aria-hidden="true" />
+                        )}
+                        <span className="min-w-0 flex-1 text-left">
+                          <span className="block truncate text-sm font-medium">{workflow.title}</span>
+                          <span className="mt-0.5 block text-[11px] capitalize text-muted-foreground">
+                            {stepLabels[workflow.currentStep]} · {formatDistanceToNowStrict(workflow.updatedAt, { addSuffix: true })}
+                          </span>
+                        </span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            )}
+            {historyError && <p className="px-2 pt-2 text-xs leading-relaxed text-destructive" role="status">{historyError}</p>}
           </SidebarGroupContent>
         </SidebarGroup>
 

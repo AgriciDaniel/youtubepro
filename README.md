@@ -18,13 +18,31 @@ Search a topic, inspect the returned public-data snapshot, compare momentum and 
 
 ![YouTube Pro research analytics with video performance, momentum, duration, and publication graphs](docs/images/research-analytics.png)
 
+### Source videos
+
+Review every video included in the active public-data snapshot, with thumbnails, channel information, views, publication timing, likes, and comments visible in one grid.
+
+![YouTube Pro source-video grid showing every video used in the research snapshot](docs/images/research-source-videos.png)
+
+### AI Insights
+
+Turn the active snapshot into a scan-first research brief with audience questions, opportunity themes, recommended moves, and a clear separation between observed evidence, inference, and metrics that require YouTube Studio.
+
+![YouTube Pro AI Insights with visual summaries, evidence balance, and an expandable evidence ledger](docs/images/research-ai-insights.png)
+
 ### Script teleprompter
 
 Turn a selected idea into an editable script, then read it in a focused teleprompter with pace, size, cue, undo, and playback controls.
 
 ![YouTube Pro teleprompter with playback and reading controls](docs/images/script-teleprompter.png)
 
-The screenshots originate from real development builds using public YouTube metadata. The Research capture has only a review annotation removed. It is not a generated interface mockup.
+### Thumbnail Creator
+
+Describe the outcome once, add optional references or advanced controls, generate a readable 16:9 thumbnail, and create variations from the same workflow.
+
+![YouTube Pro Thumbnail Creator with a generated thumbnail preview and minimal creation controls](docs/images/thumbnail-creator.png)
+
+These screenshots come from a live local development build using public YouTube metadata. They are not generated interface mockups.
 
 ## Workflow
 
@@ -37,6 +55,8 @@ The product follows one continuous workflow:
 5. **Thumbnail Creator**: Use the selected promise and thumbnail concept, outcome-oriented presets, editable controls, and up to three permitted references.
 
 There is no standalone Ideas screen. The legacy `/ideas` path redirects to the Ideas section inside Research.
+
+Each press of **New Workflow** creates a separate local project. The sidebar keeps the eight most recent workflows in browser IndexedDB and reopens the last active Research, Script, or Thumbnail step. Research snapshots, generated ideas, editable scripts, thumbnail briefs, and generated thumbnail results are restored together. Uploaded reference images are intentionally not retained, so permission and file selection are fresh for every later generation.
 
 ## Requirements
 
@@ -84,6 +104,7 @@ The Settings page exposes the server allowlist and its current descriptions. Mod
 
 - There is no login screen, initial password, Thumbnail unlock, or Pro Script Studio gate.
 - API keys stay server-side and `.env` is ignored.
+- Recent workflow history stays in the current browser profile. It is not sent to a separate history service and never contains API keys.
 - Request and response bodies are not logged.
 - The application binds to loopback unless `HOST` is explicitly changed.
 - Do not expose the server directly to the internet. If remote access is required, add authentication and rate limiting at a trusted gateway, and disable or separately protect local Settings.
@@ -109,7 +130,7 @@ Continuous integration runs the test suite, TypeScript check, and production bui
 - Express 5
 - Google Gemini through `@google/genai`
 - YouTube Data API v3
-- No runtime database, session store, Passport authentication, or Replit-managed AI proxy
+- No server-side runtime database, session store, Passport authentication, or Replit-managed AI proxy
 
 ## Quotas and costs
 

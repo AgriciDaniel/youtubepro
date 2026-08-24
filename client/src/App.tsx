@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ControllerGuide } from "@/components/controller-guide";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { WorkflowProvider } from "@/lib/workflow-context";
+import { WorkflowProvider, useWorkflow } from "@/lib/workflow-context";
 import NotFound from "@/pages/not-found";
 import ResearchDashboard from "@/pages/research";
 import ScriptPage from "@/pages/script";
@@ -16,8 +16,9 @@ import SettingsPage from "@/pages/settings";
 import ThumbnailPage from "@/pages/thumbnail";
 
 function Router() {
+  const { state } = useWorkflow();
   return (
-    <Switch>
+    <Switch key={state.id || "workflow-loading"}>
       <Route path="/" component={ResearchDashboard} />
       <Route path="/ideas">
         <Redirect to="/#ideas" replace />

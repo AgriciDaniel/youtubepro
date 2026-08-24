@@ -118,6 +118,13 @@ function warningText(warning: ApiWarning): string {
   return warning.message || warning.code || "Some enrichment data is unavailable.";
 }
 
+function scanLabel(value: string, fallback: string): string {
+  const cleaned = value.replace(/^gap\s*\d*\s*[-:]\s*/i, "").trim();
+  if (!cleaned) return fallback;
+  const firstClause = cleaned.split(/[.:;]/)[0]?.trim() || cleaned;
+  return firstClause.length > 76 ? `${firstClause.slice(0, 75).trimEnd()}…` : firstClause;
+}
+
 function errorPresentation(category: ApiErrorCategory) {
   switch (category) {
     case "missing_key":
@@ -239,6 +246,8 @@ export default function ResearchDashboard() {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
+  const [evidenceLedgerOpen, setEvidenceLedgerOpen] = useState(false);
+  const [methodologyOpen, setMethodologyOpen] = useState(false);
   const [exporting, setExporting] = useState<"pdf" | "xls" | "csv" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
@@ -283,7 +292,9 @@ export default function ResearchDashboard() {
       setCachedData({
         videos: cached.videos,
         totalResults: cached.totalResults,
-        nextPageToken: undefined,
+        resultsPerPage: cached.resultsPerPage,
+        regionCode: cached.regionCode,
+        nextPageToken: cached.nextPageToken,
         snapshotId: cached.snapshotId || `legacy-${cached.timestamp}`,
         retrievedAt: cached.retrievedAt || new Date(cached.timestamp).toISOString(),
         totalResultsIsApproximate: cached.totalResultsIsApproximate ?? true,
@@ -307,7 +318,10 @@ export default function ResearchDashboard() {
       });
       const restoredSnapshotId = cached.snapshotId || `legacy-${cached.timestamp}`;
       currentSnapshotRef.current = restoredSnapshotId;
-      if (workflowState.idea?.evidenceContext?.snapshotId === restoredSnapshotId) {
+      if (
+        workflowState.idea?.niche === cached.query
+        || workflowState.idea?.evidenceContext?.snapshotId === restoredSnapshotId
+      ) {
         const restoredIdeas = workflowState.idea.generatedIdeas || [];
         setIdeaPackages(restoredIdeas);
         setSelectedIdea(workflowState.idea.selectedIdea);
@@ -359,6 +373,8 @@ export default function ResearchDashboard() {
     setIdeasErrorCategory(null);
     setExportError(null);
     setExpandedQuestions(new Set());
+    setEvidenceLedgerOpen(false);
+    setMethodologyOpen(false);
     currentSnapshotRef.current = "";
     insightsFetchedRef.current = "";
     ideasFetchedRef.current = "";
@@ -413,7 +429,7 @@ export default function ResearchDashboard() {
       }
       return res.json();
     },
-    enabled: submittedQuery.length > 0,
+    enabled: submittedQuery.length > 0 && !cachedData,
   });
 
   const sourceData = data || cachedData;
@@ -580,6 +596,12 @@ export default function ResearchDashboard() {
       }
       setIdeaPackages(result.ideas);
       setSelectedIdea(null);
+      setIdeaData({
+        selectedIdea: null,
+        generatedIdeas: result.ideas,
+        niche: submittedQuery,
+        audience: insights.targetAudience?.primaryDemographic || "",
+      });
     } catch (requestError) {
       if (controller.signal.aborted) return;
       const normalizedError = requestError instanceof ResearchRequestError
@@ -596,7 +618,7 @@ export default function ResearchDashboard() {
     } finally {
       if (currentSnapshotRef.current === requestedSnapshotId) setIdeasLoading(false);
     }
-  }, [sourceData, insights, ideasLoading, isFetching, snapshotId, submittedQuery]);
+  }, [sourceData, insights, ideasLoading, isFetching, snapshotId, submittedQuery, setIdeaData]);
 
   useEffect(() => {
     if (insights && !insightsLoading && !ideasLoading && ideaPackages.length === 0 && !ideasError) {
@@ -720,6 +742,9 @@ export default function ResearchDashboard() {
     setCachedResearch({
       query: submittedQuery,
       totalResults: sourceData.totalResults,
+      resultsPerPage: sourceData.resultsPerPage,
+      regionCode: sourceData.regionCode,
+      nextPageToken: sourceData.nextPageToken,
       videos: sourceData.videos,
       insights: insights,
       analytics: {
@@ -747,6 +772,11 @@ export default function ResearchDashboard() {
       provenance: sourceData.provenance,
     });
   }, [data, cachedData, analytics, insights, submittedQuery, appliedFilters, setCachedResearch]);
+
+  useEffect(() => {
+    if (!submittedQuery || isFetching || !sourceData?.videos?.length || !analytics) return;
+    saveResearchToCache();
+  }, [analytics, isFetching, saveResearchToCache, sourceData, submittedQuery]);
 
   const handleSelectIdea = (idea: IdeaPackage) => {
     if (!sourceData || !insights?.evidenceClaims?.length) return;
@@ -1485,6 +1515,25 @@ export default function ResearchDashboard() {
                       </CardContent>
                     </Card>
 
+                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="AI insight overview">
+                      {[
+                        { label: "Questions", value: insights.peopleAlsoAsk?.length || 0, icon: HelpCircle, color: "text-info bg-info-subtle" },
+                        { label: "Opportunities", value: insights.contentGaps?.length || 0, icon: Lightbulb, color: "text-warning bg-warning-subtle" },
+                        { label: "Themes", value: insights.trendingSubtopics?.length || 0, icon: TrendingUp, color: "text-success bg-success-subtle" },
+                        { label: "Next moves", value: insights.recommendedActions?.length || 0, icon: ListChecks, color: "text-primary bg-primary/10" },
+                      ].map(({ label, value, icon: Icon, color }) => (
+                        <div key={label} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-4">
+                          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${color}`}>
+                            <Icon className="h-4 w-4" aria-hidden="true" />
+                          </span>
+                          <div>
+                            <p className="text-2xl font-semibold tabular-nums">{value}</p>
+                            <p className="text-xs text-muted-foreground">{label}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
                     {insights.queryIntent && (
                       <Card>
                         <CardHeader>
@@ -1513,65 +1562,101 @@ export default function ResearchDashboard() {
                     )}
 
                     {insights.evidenceSignals && (
-                      <div className="grid items-start gap-4 lg:grid-cols-3">
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <Activity className="h-4 w-4 text-info" aria-hidden="true" />
+                            Evidence balance
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground">Scan what is known, inferred, and still needs creator-side validation.</p>
+                        </CardHeader>
+                        <CardContent className="grid gap-3 lg:grid-cols-3">
                         {[
                           {
                             title: "Observed",
-                            description: "Directly visible in this public sample",
+                            description: "Visible in the public sample",
                             items: insights.evidenceSignals.observed,
                             icon: CheckCircle2,
-                            color: "border-success-subtle bg-success-subtle text-success",
+                            color: "border-success-subtle bg-success-subtle",
+                            accent: "bg-success",
+                            text: "text-success",
                           },
                           {
                             title: "Inferred",
-                            description: "Useful hypotheses, not measured facts",
+                            description: "Useful hypotheses",
                             items: insights.evidenceSignals.inferred,
                             icon: Lightbulb,
-                            color: "border-warning-subtle bg-warning-subtle text-warning",
+                            color: "border-warning-subtle bg-warning-subtle",
+                            accent: "bg-warning",
+                            text: "text-warning",
                           },
                           {
                             title: "Requires Studio",
-                            description: "Validate with channel-owner Analytics",
+                            description: "Needs owner Analytics",
                             items: insights.evidenceSignals.requiresStudio,
                             icon: FlaskConical,
-                            color: "border-info-subtle bg-info-subtle text-info",
+                            color: "border-info-subtle bg-info-subtle",
+                            accent: "bg-info",
+                            text: "text-info",
                           },
-                        ].map(({ title, description, items, icon: Icon, color }) => (
-                          <Card key={title} className={color}>
-                            <CardHeader className="pb-3">
-                              <CardTitle className="text-base flex items-center gap-2">
-                                <Icon className="h-4 w-4" />
-                                {title}
-                              </CardTitle>
-                              <p className="text-xs text-muted-foreground">{description}</p>
-                            </CardHeader>
-                            <CardContent>
-                              <ul className="space-y-2 text-sm text-foreground">
+                        ].map(({ title, description, items, icon: Icon, color, accent, text }) => (
+                          <div key={title} className={`rounded-xl border p-4 ${color}`}>
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <span className={`flex h-9 w-9 items-center justify-center rounded-full bg-background/70 ${text}`}>
+                                  <Icon className="h-4 w-4" aria-hidden="true" />
+                                </span>
+                                <div>
+                                  <p className="font-semibold">{title}</p>
+                                  <p className="text-xs text-muted-foreground">{description}</p>
+                                </div>
+                              </div>
+                              <span className={`text-3xl font-semibold tabular-nums ${text}`}>{items?.length || 0}</span>
+                            </div>
+                            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-background/70" aria-hidden="true">
+                              <div
+                                className={`h-full rounded-full ${accent}`}
+                                style={{ width: `${Math.max(12, Math.min(100, (items?.length || 0) * 24))}%` }}
+                              />
+                            </div>
+                            <details className="mt-3 text-sm text-foreground">
+                              <summary className="cursor-pointer select-none text-xs font-medium text-muted-foreground hover:text-foreground">View findings</summary>
+                              <ul className="mt-3 space-y-2">
                                 {items?.map((item, index) => (
                                   <li key={index} className="flex items-start gap-2">
-                                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-70" />
+                                    <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${accent}`} aria-hidden="true" />
                                     <span>{item}</span>
                                   </li>
                                 ))}
                               </ul>
-                            </CardContent>
-                          </Card>
+                            </details>
+                          </div>
                         ))}
-                      </div>
+                        </CardContent>
+                      </Card>
                     )}
 
                     {insights.evidenceClaims && insights.evidenceClaims.length > 0 && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-base">
-                            <Database className="h-4 w-4" aria-hidden="true" />
-                            Snapshot Evidence Ledger
-                          </CardTitle>
-                          <p className="text-xs text-muted-foreground">
-                            Each decision claim is tied to a source video or explicitly marked as a snapshot-level inference that needs validation.
-                          </p>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
+                      <Collapsible open={evidenceLedgerOpen} onOpenChange={setEvidenceLedgerOpen}>
+                        <Card>
+                          <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+                            <div>
+                              <CardTitle className="flex items-center gap-2 text-base">
+                                <Database className="h-4 w-4" aria-hidden="true" />
+                                Evidence ledger
+                                <Badge variant="secondary">{insights.evidenceClaims.length} claims</Badge>
+                              </CardTitle>
+                              <p className="mt-1 text-xs text-muted-foreground">Open the source-level audit trail when you need to verify a recommendation.</p>
+                            </div>
+                            <CollapsibleTrigger asChild>
+                              <Button type="button" variant="outline" size="sm" className="shrink-0 gap-2">
+                                {evidenceLedgerOpen ? "Hide details" : "View evidence"}
+                                {evidenceLedgerOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                              </Button>
+                            </CollapsibleTrigger>
+                          </CardHeader>
+                          <CollapsibleContent>
+                            <CardContent className="space-y-3 border-t border-border/70 pt-5">
                           {insights.evidenceClaims.map((claim) => (
                             <article key={claim.id} className="rounded-lg border border-border/70 bg-muted/10 p-4">
                               <div className="flex flex-wrap items-center gap-2">
@@ -1607,8 +1692,10 @@ export default function ResearchDashboard() {
                               </p>
                             </article>
                           ))}
-                        </CardContent>
-                      </Card>
+                            </CardContent>
+                          </CollapsibleContent>
+                        </Card>
+                      </Collapsible>
                     )}
 
                     <Card>
@@ -1755,9 +1842,14 @@ export default function ResearchDashboard() {
                         <CardContent>
                           <ul className="space-y-2">
                             {insights.contentGaps?.map((gap, i) => (
-                              <li key={i} className="flex items-start gap-2 text-sm">
-                                <span className="text-info font-bold">{i + 1}.</span>
-                                {gap}
+                              <li key={i} className="rounded-lg border border-border/70 bg-muted/10 px-3 py-2 text-sm">
+                                <details>
+                                  <summary className="cursor-pointer select-none font-medium">
+                                    <span className="mr-2 text-info">{i + 1}.</span>
+                                    {scanLabel(gap, `Opportunity ${i + 1}`)}
+                                  </summary>
+                                  <p className="mt-2 pl-6 leading-relaxed text-muted-foreground">{gap}</p>
+                                </details>
                               </li>
                             ))}
                           </ul>
@@ -1805,7 +1897,10 @@ export default function ResearchDashboard() {
                                   <Badge variant="outline">{action.format}</Badge>
                                 </div>
                                 <h4 className="font-semibold">{action.title}</h4>
-                                <p className="mt-2 text-sm text-muted-foreground">{action.rationale}</p>
+                                <details className="mt-3 rounded-lg bg-muted/25 px-3 py-2">
+                                  <summary className="cursor-pointer select-none text-xs font-medium text-info">Why this move</summary>
+                                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{action.rationale}</p>
+                                </details>
                               </div>
                             ))}
                           </div>
@@ -1814,14 +1909,25 @@ export default function ResearchDashboard() {
                     )}
 
                     {insights.methodology && (
-                      <Card className="bg-muted/20">
-                        <CardHeader>
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <Database className="h-4 w-4" />
-                            Evidence and Limits
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid gap-4 md:grid-cols-[1fr_2fr]">
+                      <Collapsible open={methodologyOpen} onOpenChange={setMethodologyOpen}>
+                        <Card className="bg-muted/20">
+                          <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+                            <div>
+                              <CardTitle className="flex items-center gap-2 text-base">
+                                <Database className="h-4 w-4" />
+                                Evidence and limits
+                              </CardTitle>
+                              <p className="mt-1 text-xs text-muted-foreground">Public API basis, scope, and unavailable owner-only metrics.</p>
+                            </div>
+                            <CollapsibleTrigger asChild>
+                              <Button type="button" variant="ghost" size="sm" className="shrink-0 gap-2">
+                                {methodologyOpen ? "Hide" : "Review limits"}
+                                {methodologyOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                              </Button>
+                            </CollapsibleTrigger>
+                          </CardHeader>
+                          <CollapsibleContent>
+                            <CardContent className="grid gap-4 border-t border-border/70 pt-5 md:grid-cols-[1fr_2fr]">
                           <div>
                             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Basis</p>
                             <p className="mt-1 text-sm">{insights.methodology.basis}</p>
@@ -1837,8 +1943,10 @@ export default function ResearchDashboard() {
                               ))}
                             </ul>
                           </div>
-                        </CardContent>
-                      </Card>
+                            </CardContent>
+                          </CollapsibleContent>
+                        </Card>
+                      </Collapsible>
                     )}
                   </div>
                 ) : (

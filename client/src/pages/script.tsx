@@ -1049,6 +1049,7 @@ export default function ScriptPage() {
   const [regeneratingTitles, setRegeneratingTitles] = useState(false);
   const [actionError, setActionError] = useState<ScriptActionError | null>(null);
   const retryActionRef = useRef<null | (() => void)>(null);
+  const restoredWorkflowRef = useRef<string | null>(null);
   const { toast } = useToast();
   const { state: workflowState, setScriptData, clearScriptCache, goToStep } = useWorkflow();
   const [, setLocation] = useLocation();
@@ -1080,7 +1081,37 @@ export default function ScriptPage() {
   const selectedPersona = form.watch("persona");
 
   useEffect(() => {
-    if (workflowState.isWorkflowActive && workflowState.idea?.selectedIdea) {
+    if (restoredWorkflowRef.current === workflowState.id) return;
+    restoredWorkflowRef.current = workflowState.id;
+    const cached = workflowState.cachedScript;
+    if (!cached?.script) return;
+    form.reset({
+      topic: cached.topic,
+      format: cached.format as VideoFormat,
+      audience: cached.audience as TargetAudience,
+      persona: (cached.persona || CreatorPersona.NONE) as CreatorPersona,
+      customPersona: cached.customPersona || "",
+      additionalNotes: cached.additionalNotes || "",
+    });
+    setResult(cached.result || {
+      script: cached.script,
+      titles: cached.title ? [cached.title] : undefined,
+      hook: "",
+      structure: [],
+      payoff: "",
+      primaryCta: "",
+      studioValidation: "",
+      metadata: {
+        wordCount: cached.wordCount || cached.script.trim().split(/\s+/).length,
+        estimatedDuration: cached.estimatedDuration || "",
+        generatedAt: new Date(cached.timestamp).toISOString(),
+      },
+      evidenceContext: cached.evidenceContext,
+    });
+  }, [form, workflowState.id]);
+
+  useEffect(() => {
+    if (workflowState.isWorkflowActive && workflowState.idea?.selectedIdea && !workflowState.cachedScript) {
       const idea = workflowState.idea.selectedIdea;
       form.setValue("topic", idea.title);
       form.setValue("format", mapFormatToEnum(idea.format));
@@ -1133,11 +1164,14 @@ export default function ScriptPage() {
         format: formValues.format,
         audience: formValues.audience,
         persona: formValues.persona,
+        customPersona: formValues.customPersona,
+        additionalNotes: formValues.additionalNotes,
         keywords: workflowState.idea?.selectedIdea?.keywords,
         wordCount: data.metadata?.wordCount,
         estimatedDuration: data.metadata?.estimatedDuration,
         timestamp: Date.now(),
         evidenceContext: data.evidenceContext,
+        result: data,
       });
 
       toast({
@@ -1194,7 +1228,8 @@ export default function ScriptPage() {
         evidenceContext: workflowState.idea?.evidenceContext,
       }) as { titles: string[] };
 
-      setResult(prev => prev ? { ...prev, titles: response.titles } : prev);
+      const updatedResult = { ...result, titles: response.titles };
+      setResult(updatedResult);
       const formValues = form.getValues();
       setScriptData({
         script: result.script,
@@ -1203,11 +1238,14 @@ export default function ScriptPage() {
         format: formValues.format,
         audience: formValues.audience,
         persona: formValues.persona,
+        customPersona: formValues.customPersona,
+        additionalNotes: formValues.additionalNotes,
         keywords: workflowState.idea?.selectedIdea?.keywords,
         wordCount: result.metadata.wordCount,
         estimatedDuration: result.metadata.estimatedDuration,
         timestamp: Date.now(),
         evidenceContext: workflowState.idea?.evidenceContext,
+        result: updatedResult,
       });
       toast({
         title: "Titles Regenerated",
@@ -1224,11 +1262,12 @@ export default function ScriptPage() {
 
   const persistScriptRevision = (updatedScript: string) => {
     const wordCount = updatedScript.trim() ? updatedScript.trim().split(/\s+/).length : 0;
-    setResult(prev => prev ? {
-      ...prev,
+    const updatedResult = result ? {
+      ...result,
       script: updatedScript,
-      metadata: { ...prev.metadata, wordCount },
-    } : prev);
+      metadata: { ...result.metadata, wordCount },
+    } : null;
+    setResult(updatedResult);
     const formValues = form.getValues();
     setScriptData({
       script: updatedScript,
@@ -1237,11 +1276,14 @@ export default function ScriptPage() {
       format: formValues.format,
       audience: formValues.audience,
       persona: formValues.persona,
+      customPersona: formValues.customPersona,
+      additionalNotes: formValues.additionalNotes,
       keywords: workflowState.idea?.selectedIdea?.keywords,
       wordCount,
       estimatedDuration: result?.metadata.estimatedDuration,
       timestamp: Date.now(),
       evidenceContext: workflowState.idea?.evidenceContext,
+      result: updatedResult || undefined,
     });
   };
 
