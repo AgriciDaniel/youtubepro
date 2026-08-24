@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title description">
+  <title id="title">YouTube Pro</title>
+  <desc id="description">A white play symbol on a smooth coral rounded square</desc>
+  <defs>
+    <linearGradient id="surface" x1="22" y1="14" x2="108" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F27A5E"/>
+      <stop offset="1" stop-color="#C94F37"/>
+    </linearGradient>
+    <linearGradient id="highlight" x1="64" y1="18" x2="64" y2="78" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="4" y="6" width="120" height="124" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#6D2116" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <rect x="12" y="10" width="104" height="104" rx="28" fill="url(#surface)"/>
+    <rect x="13" y="11" width="102" height="58" rx="27" fill="url(#highlight)"/>
+    <rect x="12.75" y="10.75" width="102.5" height="102.5" rx="27.25" fill="none" stroke="#FFFFFF" stroke-opacity="0.2" stroke-width="1.5"/>
+    <path d="M53 43.6C53 41.6 55.2 40.4 56.9 41.4L88.4 61.8C90 62.8 90 65.2 88.4 66.2L56.9 86.6C55.2 87.6 53 86.4 53 84.4V43.6Z" fill="#FFFFFF"/>
+  </g>
+</svg>

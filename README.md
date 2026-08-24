@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="client/public/favicon.png" width="72" alt="YouTube Pro logo">
+  <img src="client/public/youtube-pro.svg" width="88" alt="YouTube Pro logo">
 </p>
 
 <h1 align="center">YouTube Pro</h1>
@@ -24,7 +24,7 @@ Turn a selected idea into an editable script, then read it in a focused teleprom
 
 ![YouTube Pro teleprompter with playback and reading controls](docs/images/script-teleprompter.png)
 
-The screenshots show real development builds using public YouTube metadata. They are not generated interface mockups.
+The screenshots originate from real development builds using public YouTube metadata. The Research capture has only a review annotation removed. It is not a generated interface mockup.
 
 ## Workflow
 
