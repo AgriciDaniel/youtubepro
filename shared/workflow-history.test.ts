@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
   deriveWorkflowTitle,
+  normalizeCustomWorkflowTitle,
   sortAndLimitWorkflowSummaries,
   type WorkflowHistorySummary,
 } from "./workflow-history";
@@ -38,6 +39,12 @@ describe("workflow history helpers", () => {
     const title = deriveWorkflowTitle({ researchQuery: "A".repeat(80) });
     assert.equal(title.length, 48);
     assert.equal(title.endsWith("…"), true);
+  });
+
+  test("normalizes a user-provided workflow name", () => {
+    assert.equal(normalizeCustomWorkflowTitle("  Launch   research  "), "Launch research");
+    assert.equal(normalizeCustomWorkflowTitle("   "), null);
+    assert.equal(normalizeCustomWorkflowTitle("A".repeat(80))?.length, 48);
   });
 
   test("keeps the newest unique summaries within the limit", () => {

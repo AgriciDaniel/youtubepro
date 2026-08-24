@@ -9,6 +9,7 @@ This update makes YouTube Pro easier to leave and resume. Research, generated id
 - **Recent workflows:** The sidebar lists the eight most recently updated projects and reopens the last useful Research, Script Writer, or Thumbnail Creator step.
 - **Browser-local persistence:** Research snapshots, AI Insights, grounded ideas, script output and revisions, thumbnail briefs, and generated thumbnail results are stored in IndexedDB.
 - **Independent projects:** **New Workflow** starts a fresh project without replacing earlier work in the recent-workflow list.
+- **Workflow management:** Recent projects can be renamed from the sidebar or deleted after explicit confirmation.
 - **Workflow helper tests:** Shared title, ordering, deduplication, and history-limit behavior now have focused automated coverage.
 
 ### Improved

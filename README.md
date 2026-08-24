@@ -56,7 +56,7 @@ The product follows one continuous workflow:
 
 There is no standalone Ideas screen. The legacy `/ideas` path redirects to the Ideas section inside Research.
 
-Each press of **New Workflow** creates a separate local project. The sidebar keeps the eight most recent workflows in browser IndexedDB and reopens the last active Research, Script, or Thumbnail step. Research snapshots, generated ideas, editable scripts, thumbnail briefs, and generated thumbnail results are restored together. Uploaded reference images are intentionally not retained, so permission and file selection are fresh for every later generation.
+Each press of **New Workflow** creates a separate local project. The sidebar keeps the eight most recent workflows in browser IndexedDB, lets the user rename or delete them, and reopens the last active Research, Script, or Thumbnail step. Research snapshots, generated ideas, editable scripts, thumbnail briefs, and generated thumbnail results are restored together. Uploaded reference images are intentionally not retained, so permission and file selection are fresh for every later generation.
 
 ## Requirements
 

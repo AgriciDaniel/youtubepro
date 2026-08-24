@@ -1,4 +1,5 @@
 export const WORKFLOW_HISTORY_LIMIT = 8;
+export const WORKFLOW_TITLE_LIMIT = 48;
 
 export type WorkflowHistoryStep = "research" | "script" | "thumbnail";
 
@@ -20,7 +21,11 @@ export interface WorkflowHistorySummary {
   hasThumbnail: boolean;
 }
 
-const TITLE_LIMIT = 48;
+export function normalizeCustomWorkflowTitle(value: string): string | null {
+  const normalized = value.trim().replace(/\s+/g, " ");
+  if (!normalized) return null;
+  return normalized.slice(0, WORKFLOW_TITLE_LIMIT).trimEnd();
+}
 
 export function deriveWorkflowTitle(signals: WorkflowTitleSignals): string {
   const candidates = [
@@ -31,8 +36,8 @@ export function deriveWorkflowTitle(signals: WorkflowTitleSignals): string {
   ];
   const selected = candidates.find((candidate) => candidate?.trim())?.trim();
   if (!selected) return "Untitled workflow";
-  return selected.length > TITLE_LIMIT
-    ? `${selected.slice(0, TITLE_LIMIT - 1).trimEnd()}…`
+  return selected.length > WORKFLOW_TITLE_LIMIT
+    ? `${selected.slice(0, WORKFLOW_TITLE_LIMIT - 1).trimEnd()}…`
     : selected;
 }
 

@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YouTube Pro: From Topic to Ready to Record</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111211;
+      --surface: #1b1d1c;
+      --surface-soft: #222423;
+      --line: #343735;
+      --text: #f6f4ef;
+      --muted: #aaa9a4;
+      --coral: #e46c50;
+      --coral-soft: #4b2921;
+      --blue: #67a9e8;
+      --green: #52c89b;
+      --amber: #e2b75f;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(228, 108, 80, 0.14), transparent 30%),
+        radial-gradient(circle at 86% 76%, rgba(103, 169, 232, 0.08), transparent 28%);
+    }
+
+    .deck { position: relative; width: 100%; height: 100%; }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: none;
+      grid-template-rows: auto 1fr auto;
+      gap: clamp(20px, 3vh, 42px);
+      padding: clamp(42px, 6vw, 112px);
+      opacity: 0;
+    }
+
+    .slide.active {
+      display: grid;
+      opacity: 1;
+      animation: enter 300ms ease-out both;
+    }
+
+    @keyframes enter {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .eyebrow {
+      color: var(--coral);
+      font-size: clamp(14px, 1.1vw, 22px);
+      font-weight: 760;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, p { margin: 0; }
+
+    h1 {
+      max-width: 1160px;
+      font-size: clamp(52px, 7vw, 126px);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+
+    h2 {
+      max-width: 1220px;
+      font-size: clamp(42px, 5vw, 90px);
+      line-height: 1.02;
+      letter-spacing: -0.045em;
+    }
+
+    .lead {
+      max-width: 1040px;
+      color: var(--muted);
+      font-size: clamp(20px, 2vw, 38px);
+      line-height: 1.35;
+    }
+
+    .accent { color: var(--coral); }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: clamp(20px, 1.7vw, 32px);
+      font-weight: 760;
+    }
+
+    .brand img { width: 52px; height: 52px; }
+
+    .journey,
+    .triptych,
+    .two-col {
+      display: grid;
+      gap: clamp(14px, 1.5vw, 28px);
+      align-items: stretch;
+    }
+
+    .journey { grid-template-columns: repeat(4, 1fr); }
+    .triptych { grid-template-columns: repeat(3, 1fr); }
+    .two-col { grid-template-columns: 0.85fr 1.15fr; }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+      min-height: 150px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(27, 29, 28, 0.92);
+      padding: clamp(22px, 2vw, 40px);
+    }
+
+    .journey .card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .number {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--coral-soft);
+      color: #ff9d85;
+      font-weight: 800;
+    }
+
+    .card h3 {
+      margin: 24px 0 0;
+      font-size: clamp(22px, 1.8vw, 34px);
+      line-height: 1.1;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 18px;
+      align-items: center;
+    }
+
+    .flow-step {
+      position: relative;
+      display: grid;
+      min-height: 160px;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: clamp(20px, 1.6vw, 30px);
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .flow-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      z-index: 2;
+      top: 50%;
+      right: -18px;
+      width: 18px;
+      border-top: 2px dashed #555854;
+    }
+
+    .gap-label {
+      align-self: end;
+      color: var(--coral);
+      font-size: clamp(18px, 1.4vw, 27px);
+      font-weight: 720;
+      text-align: center;
+    }
+
+    .screen {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--surface);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.34);
+    }
+
+    .screen img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+    }
+
+    .screen.tall { min-height: min(60vh, 680px); }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-content: center;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      padding: 16px 22px;
+      font-size: clamp(18px, 1.4vw, 28px);
+      font-weight: 720;
+    }
+
+    .pill.observed { border-color: rgba(82, 200, 155, 0.45); color: var(--green); }
+    .pill.inferred { border-color: rgba(103, 169, 232, 0.45); color: var(--blue); }
+    .pill.studio { border-color: rgba(226, 183, 95, 0.45); color: var(--amber); }
+
+    .final-claim {
+      max-width: 1280px;
+      font-size: clamp(46px, 6vw, 108px);
+      font-weight: 820;
+      line-height: 1.02;
+      letter-spacing: -0.05em;
+    }
+
+    .cta {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      border-radius: 999px;
+      background: var(--coral);
+      color: #fff;
+      padding: 18px 28px;
+      font-size: clamp(18px, 1.5vw, 28px);
+      font-weight: 780;
+    }
+
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #777a76;
+      font-size: 14px;
+      letter-spacing: 0.04em;
+    }
+
+    .controls {
+      position: fixed;
+      z-index: 20;
+      right: 24px;
+      bottom: 20px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .controls button {
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(27, 29, 28, 0.88);
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .controls button:hover,
+    .controls button:focus-visible { border-color: var(--coral); outline: none; }
+
+    @media (max-width: 900px) {
+      .journey, .triptych { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: 1fr; }
+      .flow-step { min-height: 72px; }
+      .flow-step:not(:last-child)::after { display: none; }
+    }
+
+    @media print {
+      @page { size: 13.333in 7.5in; margin: 0; }
+      html, body { overflow: visible; background: #111211; }
+      .deck { height: auto; }
+      .slide, .slide.active {
+        position: relative;
+        display: grid;
+        width: 13.333in;
+        height: 7.5in;
+        page-break-after: always;
+        opacity: 1;
+        animation: none;
+      }
+      .controls { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" aria-live="polite">
+    <section class="slide active" aria-label="Slide 1 of 7">
+      <div class="brand"><img src="../../client/public/youtube-pro.svg" alt="">YouTube Pro</div>
+      <div>
+        <p class="eyebrow">One connected creator workflow</p>
+        <h1>From topic to <span class="accent">ready to record.</span></h1>
+        <p class="lead" style="margin-top: 28px;">Public evidence becomes a creative decision, then a script and package you can use.</p>
+      </div>
+      <div class="journey" aria-label="Workflow stages">
+        <div class="card"><span class="number">1</span><h3>Research</h3></div>
+        <div class="card"><span class="number">2</span><h3>Decide</h3></div>
+        <div class="card"><span class="number">3</span><h3>Write</h3></div>
+        <div class="card"><span class="number">4</span><h3>Package</h3></div>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="Slide 2 of 7">
+      <p class="eyebrow">The creator problem</p>
+      <div>
+        <h2>The context disappears <span class="accent">between tools.</span></h2>
+        <div class="flow" style="margin-top: 58px;">
+          <div class="flow-step">Search</div>
+          <div class="flow-step">Notes</div>
+          <div class="flow-step">AI</div>
+          <div class="flow-step">Script</div>
+          <div class="flow-step">Thumbnail</div>
+        </div>
+      </div>
+      <p class="gap-label">Too many tabs. Generic prompts. Repeated setup.</p>
+    </section>
+
+    <section class="slide" aria-label="Slide 3 of 7">
+      <div>
+        <p class="eyebrow">Research</p>
+        <h2>Research you can inspect.</h2>
+      </div>
+      <div class="two-col">
+        <div class="pill-row">
+          <span class="pill">Up to 50 public videos</span>
+          <span class="pill">Sample-aware metrics</span>
+          <span class="pill">Every source visible</span>
+        </div>
+        <div class="screen tall"><img src="../images/research-analytics.png" alt="YouTube Pro Research analytics dashboard"></div>
+      </div>
+      <div class="footer"><span>Public YouTube Data API snapshot</span><span>03 / 07</span></div>
+    </section>
+
+    <section class="slide" aria-label="Slide 4 of 7">
+      <div>
+        <p class="eyebrow">AI Insights</p>
+        <h2>AI that labels <span class="accent">what it knows.</span></h2>
+      </div>
+      <div class="two-col">
+        <div class="screen tall"><img src="../images/research-ai-insights.png" alt="YouTube Pro AI Insights dashboard"></div>
+        <div class="pill-row">
+          <span class="pill observed">Observed</span>
+          <span class="pill inferred">Inferred</span>
+          <span class="pill studio">Requires Studio</span>
+        </div>
+      </div>
+      <div class="footer"><span>Evidence first. Ideas second.</span><span>04 / 07</span></div>
+    </section>
+
+    <section class="slide" aria-label="Slide 5 of 7">
+      <div>
+        <p class="eyebrow">Script Writer</p>
+        <h2>A script built to be spoken.</h2>
+      </div>
+      <div class="two-col">
+        <div class="pill-row">
+          <span class="pill">Grounded idea</span>
+          <span class="pill">Editable script</span>
+          <span class="pill">Built-in teleprompter</span>
+        </div>
+        <div class="screen tall"><img src="../images/script-teleprompter.png" alt="YouTube Pro Script Writer teleprompter"></div>
+      </div>
+      <div class="footer"><span>From research to words ready for camera</span><span>05 / 07</span></div>
+    </section>
+
+    <section class="slide" aria-label="Slide 6 of 7">
+      <div>
+        <p class="eyebrow">Thumbnail Creator</p>
+        <h2>Package the promise.</h2>
+      </div>
+      <div class="two-col">
+        <div class="screen tall"><img src="../images/thumbnail-creator.png" alt="YouTube Pro Thumbnail Creator"></div>
+        <div class="pill-row">
+          <span class="pill">Minimal visual brief</span>
+          <span class="pill">Optional references</span>
+          <span class="pill">Resume recent workflows</span>
+        </div>
+      </div>
+      <div class="footer"><span>One promise, carried through production</span><span>06 / 07</span></div>
+    </section>
+
+    <section class="slide" aria-label="Slide 7 of 7">
+      <div class="brand"><img src="../../client/public/youtube-pro.svg" alt="">YouTube Pro</div>
+      <div>
+        <p class="eyebrow">The honest promise</p>
+        <p class="final-claim">Public evidence. Human judgment. <span class="accent">One workflow.</span></p>
+        <p class="lead" style="margin-top: 28px;">Independent, local-first, evidence-aware, and under private review before a wider release.</p>
+      </div>
+      <div class="cta">Subscribe and comment “YouTube Pro”</div>
+    </section>
+  </main>
+
+  <nav class="controls" aria-label="Presentation controls">
+    <button type="button" id="previous" aria-label="Previous slide">←</button>
+    <button type="button" id="next" aria-label="Next slide">→</button>
+  </nav>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const requestedSlide = Number.parseInt(new URLSearchParams(window.location.search).get('slide') || '1', 10);
+    let current = Number.isFinite(requestedSlide)
+      ? Math.max(0, Math.min(slides.length - 1, requestedSlide - 1))
+      : 0;
+
+    function show(index) {
+      current = Math.max(0, Math.min(slides.length - 1, index));
+      slides.forEach((slide, slideIndex) => slide.classList.toggle('active', slideIndex === current));
+      document.title = `YouTube Pro presentation, ${current + 1} of ${slides.length}`;
+    }
+
+    document.getElementById('previous').addEventListener('click', () => show(current - 1));
+    document.getElementById('next').addEventListener('click', () => show(current + 1));
+    document.addEventListener('keydown', (event) => {
+      if (['ArrowRight', 'PageDown', ' '].includes(event.key)) {
+        event.preventDefault();
+        show(current + 1);
+      }
+      if (['ArrowLeft', 'PageUp'].includes(event.key)) {
+        event.preventDefault();
+        show(current - 1);
+      }
+      if (event.key === 'Home') show(0);
+      if (event.key === 'End') show(slides.length - 1);
+    });
+    show(current);
+  </script>
+</body>
+</html>

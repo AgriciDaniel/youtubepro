@@ -13,7 +13,32 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Search, FileText, Play, Settings, Rocket, Check, ArrowRight, Image, History, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Search, FileText, Play, Settings, Rocket, Check, ArrowRight, Image, History, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useWorkflow } from "@/lib/workflow-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNowStrict } from "date-fns";
@@ -56,10 +81,18 @@ export function AppSidebar() {
     historyError,
     startWorkflow,
     openWorkflow,
+    renameWorkflow,
+    removeWorkflow,
     goToStep,
   } = useWorkflow();
   const queryClient = useQueryClient();
   const [openingWorkflowId, setOpeningWorkflowId] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<{ id: string; title: string } | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [savingName, setSavingName] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [deletingWorkflow, setDeletingWorkflow] = useState(false);
 
   const handleStartWorkflow = () => {
     queryClient.removeQueries({ queryKey: ["/api/youtube/search"] });
@@ -77,6 +110,47 @@ export function AppSidebar() {
       setLocation(step === "script" ? "/script" : step === "thumbnail" ? "/thumbnail" : "/");
     } finally {
       setOpeningWorkflowId(null);
+    }
+  };
+
+  const beginRename = (id: string, title: string) => {
+    setRenameTarget({ id, title });
+    setRenameValue(title);
+    setRenameError(null);
+  };
+
+  const handleRename = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!renameTarget) return;
+    const title = renameValue.trim().replace(/\s+/g, " ");
+    if (!title) {
+      setRenameError("Enter a workflow name.");
+      return;
+    }
+    setSavingName(true);
+    try {
+      const renamed = await renameWorkflow(renameTarget.id, title);
+      if (renamed) setRenameTarget(null);
+      else setRenameError("The workflow could not be renamed.");
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const deletingActiveWorkflow = deleteTarget.id === state.id;
+    setDeletingWorkflow(true);
+    try {
+      const step = await removeWorkflow(deleteTarget.id);
+      if (!step) return;
+      if (deletingActiveWorkflow) {
+        queryClient.removeQueries({ queryKey: ["/api/youtube/search"] });
+        setLocation(step === "script" ? "/script" : step === "thumbnail" ? "/thumbnail" : "/");
+      }
+      setDeleteTarget(null);
+    } finally {
+      setDeletingWorkflow(false);
     }
   };
 
@@ -226,7 +300,7 @@ export function AppSidebar() {
                       <SidebarMenuButton
                         type="button"
                         isActive={active}
-                        className="h-auto min-h-12 items-start py-2"
+                        className="h-auto min-h-12 items-start py-2 pr-8"
                         onClick={() => void handleOpenWorkflow(workflow.id)}
                         disabled={openingWorkflowId !== null}
                         data-testid={`button-recent-workflow-${workflow.id}`}
@@ -245,6 +319,28 @@ export function AppSidebar() {
                           </span>
                         </span>
                       </SidebarMenuButton>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          className="absolute right-1 top-1.5 flex aspect-square w-7 items-center justify-center rounded-md text-sidebar-foreground opacity-100 outline-none ring-sidebar-ring transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 md:opacity-0 md:group-focus-within/menu-item:opacity-100 md:group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 [&>svg]:size-4"
+                          aria-label={`Actions for ${workflow.title}`}
+                          data-testid={`button-workflow-actions-${workflow.id}`}
+                        >
+                          <MoreHorizontal aria-hidden="true" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="right" align="start" className="w-40">
+                          <DropdownMenuItem onSelect={() => beginRename(workflow.id, workflow.title)}>
+                            <Pencil aria-hidden="true" />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => setDeleteTarget({ id: workflow.id, title: workflow.title })}
+                          >
+                            <Trash2 aria-hidden="true" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </SidebarMenuItem>
                   );
                 })}
@@ -272,6 +368,61 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+
+      <Dialog open={Boolean(renameTarget)} onOpenChange={(open) => { if (!open && !savingName) setRenameTarget(null); }}>
+        <DialogContent>
+          <form onSubmit={handleRename} className="space-y-5">
+            <DialogHeader>
+              <DialogTitle>Rename workflow</DialogTitle>
+              <DialogDescription>Give this project a short name that will be easy to recognize later.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Input
+                autoFocus
+                value={renameValue}
+                maxLength={48}
+                onChange={(event) => { setRenameValue(event.target.value); setRenameError(null); }}
+                aria-label="Workflow name"
+                aria-invalid={Boolean(renameError)}
+                data-testid="input-workflow-name"
+              />
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <span className={renameError ? "text-destructive" : "text-muted-foreground"}>{renameError || "Maximum 48 characters"}</span>
+                <span className="tabular-nums text-muted-foreground">{renameValue.length}/48</span>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setRenameTarget(null)} disabled={savingName}>Cancel</Button>
+              <Button type="submit" disabled={savingName || !renameValue.trim()}>
+                {savingName && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                Save name
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open && !deletingWorkflow) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{deleteTarget?.title}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the locally saved research, ideas, script, and thumbnail for this workflow. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingWorkflow}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => { event.preventDefault(); void handleDelete(); }}
+              disabled={deletingWorkflow}
+            >
+              {deletingWorkflow && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+              Delete workflow
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sidebar>
   );
 }

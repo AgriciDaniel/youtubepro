@@ -9,6 +9,7 @@ import type {
 } from "@shared/schema";
 import {
   deriveWorkflowTitle,
+  normalizeCustomWorkflowTitle,
   sortAndLimitWorkflowSummaries,
   type WorkflowHistorySummary,
 } from "@shared/workflow-history";
@@ -121,6 +122,7 @@ export type WorkflowStep = "research" | "script" | "thumbnail";
 interface WorkflowState {
   id: string | null;
   title: string;
+  customTitle: string | null;
   createdAt: number | null;
   updatedAt: number | null;
   currentStep: WorkflowStep;
@@ -140,7 +142,8 @@ interface WorkflowContextType {
   historyError: string | null;
   startWorkflow: () => void;
   openWorkflow: (id: string) => Promise<WorkflowStep | null>;
-  removeWorkflow: (id: string) => Promise<void>;
+  renameWorkflow: (id: string, title: string) => Promise<boolean>;
+  removeWorkflow: (id: string) => Promise<WorkflowStep | null>;
   endWorkflow: () => void;
   setCachedResearch: (data: CachedResearchData) => void;
   setIdeaData: (data: IdeaData) => void;
@@ -160,6 +163,7 @@ function createEmptyState(id: string | null = null, now: number | null = null): 
   return {
     id,
     title: "Untitled workflow",
+    customTitle: null,
     createdAt: now,
     updatedAt: now,
     currentStep: "research",
@@ -199,7 +203,8 @@ function normalizeState(value: Partial<WorkflowState>, fallbackId?: string): Wor
     ...createEmptyState(id, createdAt),
     ...value,
     id,
-    title: typeof value.title === "string" && value.title.trim() ? value.title : "Untitled workflow",
+    title: "Untitled workflow",
+    customTitle: typeof value.customTitle === "string" ? normalizeCustomWorkflowTitle(value.customTitle) : null,
     createdAt,
     updatedAt: typeof value.updatedAt === "number" ? value.updatedAt : createdAt,
     currentStep: normalizeStep(value.currentStep),
@@ -213,7 +218,7 @@ function normalizeState(value: Partial<WorkflowState>, fallbackId?: string): Wor
   };
   return {
     ...normalized,
-    title: deriveWorkflowTitle({
+    title: normalized.customTitle || deriveWorkflowTitle({
       researchQuery: normalized.cachedResearch?.query,
       scriptTitle: normalized.cachedScript?.title,
       scriptTopic: normalized.cachedScript?.topic,
@@ -234,7 +239,7 @@ function updateState(previous: WorkflowState, changes: Partial<WorkflowState>): 
   };
   return {
     ...next,
-    title: deriveWorkflowTitle({
+    title: next.customTitle || deriveWorkflowTitle({
       researchQuery: next.cachedResearch?.query,
       scriptTitle: next.cachedScript?.title,
       scriptTopic: next.cachedScript?.topic,
@@ -382,23 +387,76 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const removeWorkflow = useCallback(async (id: string) => {
-    await saveQueueRef.current;
-    await deleteWorkflowRecord(id);
-    const records = await listWorkflowRecords<WorkflowState>();
-    setRecentWorkflows(recordsToSummaries(records));
-    if (state.id === id) {
+  const renameWorkflow = useCallback(async (id: string, title: string): Promise<boolean> => {
+    const customTitle = normalizeCustomWorkflowTitle(title);
+    if (!customTitle) {
+      setHistoryError("Workflow names cannot be empty.");
+      return false;
+    }
+    try {
+      await saveQueueRef.current;
+      const record = await getWorkflowRecord<WorkflowState>(id);
+      if (!record) {
+        setRecentWorkflows((current) => current.filter((item) => item.id !== id));
+        setHistoryError("That workflow is no longer available in local history.");
+        return false;
+      }
+      const current = normalizeState(record.state, record.id);
+      const renamed: WorkflowState = {
+        ...current,
+        title: customTitle,
+        customTitle,
+        updatedAt: Date.now(),
+      };
+      await putWorkflowRecord({
+        id: record.id,
+        createdAt: record.createdAt,
+        updatedAt: renamed.updatedAt as number,
+        state: renamed,
+      });
+      const records = await listWorkflowRecords<WorkflowState>();
+      setRecentWorkflows(recordsToSummaries(records));
+      if (state.id === id) setState(renamed);
+      setHistoryError(null);
+      return true;
+    } catch (error) {
+      console.error("Failed to rename workflow:", error);
+      setHistoryError("The workflow could not be renamed.");
+      return false;
+    }
+  }, [state.id]);
+
+  const removeWorkflow = useCallback(async (id: string): Promise<WorkflowStep | null> => {
+    try {
+      await saveQueueRef.current;
+      await deleteWorkflowRecord(id);
+      const records = await listWorkflowRecords<WorkflowState>();
+      setRecentWorkflows(recordsToSummaries(records));
+      if (state.id !== id) {
+        setHistoryError(null);
+        return state.currentStep;
+      }
       const next = records[0];
       if (next) {
         const restored = normalizeState(next.state, next.id);
+        restored.currentStep = restorableStep(restored);
         setState(restored);
         window.localStorage.setItem(ACTIVE_WORKFLOW_KEY, restored.id as string);
-      } else {
-        const now = Date.now();
-        setState(createEmptyState(createWorkflowId(), now));
+        setHistoryError(null);
+        return restored.currentStep;
       }
+      const now = Date.now();
+      const fresh = createEmptyState(createWorkflowId(), now);
+      setState(fresh);
+      window.localStorage.setItem(ACTIVE_WORKFLOW_KEY, fresh.id as string);
+      setHistoryError(null);
+      return "research";
+    } catch (error) {
+      console.error("Failed to delete workflow:", error);
+      setHistoryError("The workflow could not be deleted.");
+      return null;
     }
-  }, [state.id]);
+  }, [state.currentStep, state.id]);
 
   const clearHighlight = useCallback(() => setState((previous) => ({ ...previous, highlightSearchBox: false })), []);
   const endWorkflow = useCallback(() => setState((previous) => ({ ...previous, isWorkflowActive: false })), []);
@@ -416,7 +474,7 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <WorkflowContext.Provider value={{
-      state, recentWorkflows, historyLoading, historyError, startWorkflow, openWorkflow, removeWorkflow,
+      state, recentWorkflows, historyLoading, historyError, startWorkflow, openWorkflow, renameWorkflow, removeWorkflow,
       endWorkflow, setCachedResearch, setIdeaData, setScriptData, setThumbnailData, clearScriptCache,
       goToStep, clearWorkflow, clearHighlight, clearResearchCache,
     }}>
