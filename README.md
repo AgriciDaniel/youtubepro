@@ -10,6 +10,8 @@
 
 YouTube Pro is an evidence-grounded workspace for YouTube research, idea selection, script writing, and thumbnail creation. It combines public YouTube Data API v3 records with Gemini analysis while keeping API keys on the server.
 
+YouTube Pro is an independent project. It is not affiliated with, endorsed by, or sponsored by YouTube or Google. YouTube and Google product names are trademarks of their respective owners.
+
 ## Product tour
 
 ### Research analytics
@@ -140,10 +142,10 @@ YouTube search is quota-expensive compared with video and channel enrichment. Ge
 - [Gemini pricing](https://ai.google.dev/pricing)
 - [Gemini image generation and SynthID](https://ai.google.dev/gemini-api/docs/image-generation)
 
-## License status
+## License
 
-No open-source license has been selected yet. The previous package metadata claimed MIT without a matching `LICENSE` file, so that claim has been removed. Choose and add a license before presenting this repository as open source or accepting external redistribution and contributions.
+YouTube Pro is open source under the [Apache License 2.0](LICENSE).
 
 ## Contributing and security
 
-This repository is private while the first community release is reviewed. See [CONTRIBUTING.md](CONTRIBUTING.md) for the local quality gate. Report security issues privately according to [SECURITY.md](SECURITY.md), never in a public issue.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the local quality gate. Report security issues privately according to [SECURITY.md](SECURITY.md), never in a public issue.

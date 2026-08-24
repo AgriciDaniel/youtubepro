@@ -1,6 +1,6 @@
 # Contributing to YouTube Pro
 
-YouTube Pro is currently under private review. Contributions should preserve the continuous workflow from Research to Insights to Ideas to Script Writer to Thumbnail Creator.
+YouTube Pro welcomes focused contributions that preserve the continuous workflow from Research to Insights to Ideas to Script Writer to Thumbnail Creator.
 
 ## Local setup
 
@@ -32,6 +32,6 @@ The automated suite uses fixtures and mocks. It must not spend YouTube or Gemini
 - Include screenshots for meaningful interface changes in both dark and light themes when practical.
 - State which checks were run and any acceptance work that remains.
 
-## Public release boundary
+## License and contributions
 
-No open-source license has been selected. Do not copy or redistribute the repository outside the approved private organization until a license and public release are explicitly approved.
+By contributing, you agree that your contributions will be licensed under the repository's [Apache License 2.0](LICENSE).

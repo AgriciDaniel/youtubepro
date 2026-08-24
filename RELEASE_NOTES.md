@@ -1,5 +1,30 @@
 # Release notes
 
+## 2026-08-25: Version 1.0.0 public release
+
+This release brings the complete local-first workflow, current product documentation, and release checks together in the public GitHub repository.
+
+### Included
+
+- **Complete creation workflow:** Research, evidence-grounded AI Insights, automatically generated Ideas, Script Writer with teleprompter, and Thumbnail Creator remain connected through one restorable project.
+- **Workflow history controls:** The eight most recent browser-local projects can be reopened, renamed, or deleted after explicit confirmation.
+- **Current product tour:** Five current screenshots document Research analytics, source videos, AI Insights, the Script teleprompter, and Thumbnail Creator.
+- **Launch package:** A five-minute demonstration script, presentation, shot list, and YouTube publishing package are available under `docs/launch-video/`.
+- **Open-source repository:** The exact release is available at `AgriciDaniel/youtubepro` under the Apache License 2.0.
+
+### Verification
+
+- `npm test`: 62 tests passed
+- `npm run check`: TypeScript check passed
+- `npm run build`: Production client and server builds completed
+- `npm audit --audit-level=high`: 0 vulnerabilities
+- Current source scan outside the ignored `.env`: 0 secret findings
+- GitHub Actions runs the same test, TypeScript, and production-build gates on every push and pull request
+
+### Release boundary
+
+This is a local-first application release, not a hardened multi-user internet service. Do not expose the server directly to the internet without the authentication, secret-management, shared rate-limiting, and deployment-specific security controls described in `SECURITY.md`.
+
 ## 2026-08-24: Restorable local workflows and refreshed research experience
 
 This update makes YouTube Pro easier to leave and resume. Research, generated ideas, scripts, and thumbnail work now stay grouped as local workflows, while the research brief presents dense AI output in a more visual, scan-first format.

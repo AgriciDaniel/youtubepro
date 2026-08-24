@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Do not report suspected vulnerabilities in a public issue. Use the repository's private security advisory flow, or contact an organization owner through an already approved private channel.
+Do not report suspected vulnerabilities in a public issue. Use the repository's private security advisory flow, or contact the repository owner through an already approved private channel.
 
 Include the affected route or component, reproduction steps, expected impact, and a minimal proof of concept. Remove API keys, access tokens, personal data, and private channel data from all reports and screenshots.
 

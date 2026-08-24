@@ -3,6 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "description": "A local-first, evidence-grounded YouTube research and creation workspace.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AgriciDaniel/youtubepro.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AgriciDaniel/youtubepro/issues"
+  },
+  "homepage": "https://github.com/AgriciDaniel/youtubepro#readme",
   "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
