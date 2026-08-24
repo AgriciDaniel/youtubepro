@@ -1,0 +1,16 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+.DS_Store
+.directory
+server/public
+vite.config.ts.*
+*.tar.gz
+
+# Local workspace and retired platform metadata
+.replit
+CLAUDE.md
+design_guidelines.md
+attached_assets/
