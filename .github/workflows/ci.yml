@@ -11,17 +11,24 @@ permissions:
 
 jobs:
   verify:
+    name: Verify on Node.js ${{ matrix.node-version }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - "22.12.0"
+          - "24"
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 20.19.0
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
       - name: Install dependencies

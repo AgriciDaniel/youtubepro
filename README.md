@@ -62,7 +62,7 @@ Each press of **New Workflow** creates a separate local project. The sidebar kee
 
 ## Requirements
 
-- Node.js 20.19 or newer. Node.js 22.12 or newer is also supported by the current build toolchain.
+- Node.js 22.12 or newer. CI verifies Node.js 22.12 and the current Node.js 24 LTS line.
 - A YouTube Data API v3 key for Research.
 - A Gemini API key for Insights, Ideas, scripts, and thumbnails.
 

@@ -98,11 +98,22 @@ app.use((req, res, next) => {
   // ever needs to be reachable from another machine.
   const port = parseInt(process.env.PORT || "5000", 10);
   const host = process.env.HOST || "127.0.0.1";
+  // Keep port sharing disabled. A second local instance must fail clearly
+  // instead of distributing requests between stale development and production
+  // servers.
+  httpServer.once("error", (error: NodeJS.ErrnoException) => {
+    if (error.code === "EADDRINUSE") {
+      log(
+        `could not start on ${host}:${port}; the address is already in use. Stop the existing YouTube Pro server or set PORT to a free port.`,
+      );
+      process.exit(1);
+    }
+    throw error;
+  });
   httpServer.listen(
     {
       port,
       host,
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);

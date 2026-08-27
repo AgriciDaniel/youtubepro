@@ -4,7 +4,7 @@ YouTube Pro welcomes focused contributions that preserve the continuous workflow
 
 ## Local setup
 
-1. Install Node.js 20.19 or newer.
+1. Install Node.js 22.12 or newer.
 2. Run `npm install`.
 3. Copy `.env.example` to `.env` and add your own provider keys, or configure them through the local Settings page.
 4. Run `npm run dev` and open `http://127.0.0.1:5000`.
