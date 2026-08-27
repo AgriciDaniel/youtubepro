@@ -44,6 +44,46 @@ interface KeyFieldProps {
   children?: ReactNode;
 }
 
+const COMMUNITIES = [
+  {
+    id: "free",
+    title: "AI Marketing Hub",
+    tier: "Free community",
+    url: "https://www.skool.com/ai-marketing-hub",
+    colors: ["#F1B43C", "#3D8FD1", "#D64A43"],
+  },
+  {
+    id: "pro",
+    title: "AI Marketing Hub Pro",
+    tier: "Pro community",
+    url: "https://www.skool.com/ai-marketing-hub-pro",
+    colors: ["#D64A43", "#E2A33A", "#4D9B65"],
+  },
+] as const;
+
+function CommunityMark({
+  colors,
+}: {
+  colors: readonly [string, string, string];
+}) {
+  const heights = ["h-3", "h-5", "h-4"] as const;
+
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-10 w-10 shrink-0 items-end justify-center gap-1 rounded-lg border border-border bg-background px-2 pb-2"
+    >
+      {colors.map((color, index) => (
+        <span
+          className={`w-1 rounded-full ${heights[index]}`}
+          key={color}
+          style={{ backgroundColor: color }}
+        />
+      ))}
+    </span>
+  );
+}
+
 function KeyField({
   id,
   label,
@@ -318,6 +358,44 @@ export default function SettingsPage() {
               </div>
             </form>
           )}
+        </CardContent>
+      </Card>
+
+      <Card aria-labelledby="community-heading">
+        <CardHeader>
+          <CardTitle id="community-heading" className="text-lg">
+            Join the community
+          </CardTitle>
+          <CardDescription>
+            Connect with AI marketers, share what you learn, and get support.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          {COMMUNITIES.map((community) => (
+            <a
+              key={community.url}
+              href={community.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Join ${community.title}, ${community.tier}`}
+              className="group flex min-w-0 items-center gap-3 rounded-lg border border-border bg-background/50 p-3 transition-colors hover:border-primary/40 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              data-testid={`link-community-${community.id}`}
+            >
+              <CommunityMark colors={community.colors} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">
+                  {community.title}
+                </span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  {community.tier}
+                </span>
+              </span>
+              <ExternalLink
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary"
+              />
+            </a>
+          ))}
         </CardContent>
       </Card>
     </div>
